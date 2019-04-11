@@ -1,0 +1,25 @@
+{
+    "name": "belca/finfo",
+    "description": "Fileinfo for Dios CMS",
+    "keywords": ["fileinfo", "dios", "dioscms", "belca"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Oleg Dmitrochenko",
+            "email": "dmitrochenkooleg@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "phpunit/phpunit": "^6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Belca\\FInfo\\": "src",
+            "Tests\\": "tests/FileinfoTest"
+        },
+        "classmap": [
+            "src/"
+        ]
+    }
+}
