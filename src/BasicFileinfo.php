@@ -1,9 +1,20 @@
 <?php
 
-use Contracts\FileExplorer;
+namespace Belca\FInfo;
+
+use Belca\FInfo\FileExplorer;
 
 class BasicFileinfo extends FileExplorer
 {
+    /**
+     * Список алиасов (синонимов) виртуальных свойств (вызываемых методов).
+     *
+     * @var array
+     */
+    protected static $aliases = [
+        'filesize' => 'size',
+    ];
+
     /**
      * Работает со всеми типами файла.
      *
@@ -19,7 +30,7 @@ class BasicFileinfo extends FileExplorer
      * или время последнего изменения файла (наименьшее значение) с целью
      * получения даты создания файла.
      *
-     * @return int|false
+     * @return int
      */
     public function getCreatedProperty()
     {
@@ -33,9 +44,23 @@ class BasicFileinfo extends FileExplorer
     }
 
     /**
+     * Возвращает время последнего изменения файла.
+     *
+     * @return int
+     */
+    public function getEditedProperty()
+    {
+        if ($this->filename) {
+            return filemtime($this->filename);
+        }
+
+        return false;
+    }
+
+    /**
      * Возвращает размер файла.
      *
-     * @return int|false
+     * @return int
      */
     public function getSizeProperty()
     {

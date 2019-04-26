@@ -10,16 +10,20 @@
         }
     ],
     "minimum-stability": "dev",
-    "require": {
+    "require-dev": {
         "phpunit/phpunit": "^6.0"
     },
     "autoload": {
         "psr-4": {
-            "Belca\\FInfo\\": "src",
-            "Tests\\": "tests/FileinfoTest"
+            "Belca\\FInfo\\": "src"
         },
         "classmap": [
             "src/"
         ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/FileinfoTest"
+        },
     }
 }

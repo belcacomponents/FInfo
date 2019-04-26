@@ -2,7 +2,7 @@
 
 namespace Belca\FInfo;
 
-use Belca\FInfo\Contracts\FileExplorer;
+use Belca\FInfo\FileExplorer;
 
 class Fileinfo
 {
