@@ -34,10 +34,10 @@ class BasicFileinfo extends FileExplorer
      */
     public function getCreatedProperty()
     {
-        if ($this->filename) {
-            return filectime($this->filename) > filemtime($this->filename)
-                    ? filemtime($this->filename)
-                    : filectime($this->filename);
+        if ($this->file) {
+            return filectime($this->file) > filemtime($this->file)
+                    ? filemtime($this->file)
+                    : filectime($this->file);
         }
 
         return false;
@@ -50,8 +50,8 @@ class BasicFileinfo extends FileExplorer
      */
     public function getEditedProperty()
     {
-        if ($this->filename) {
-            return filemtime($this->filename);
+        if ($this->file) {
+            return filemtime($this->file);
         }
 
         return false;
@@ -64,8 +64,8 @@ class BasicFileinfo extends FileExplorer
      */
     public function getSizeProperty()
     {
-        if ($this->filename) {
-            return filesize($this->filename);
+        if ($this->file) {
+            return filesize($this->file);
         }
 
         return false;

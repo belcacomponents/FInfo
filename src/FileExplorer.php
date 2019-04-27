@@ -310,20 +310,45 @@ abstract class FileExplorer
     abstract public function checkCompatibility();
 
     /**
-     * Возвращает всю информацию о файле.
+     * Возвращает всю информацию о файле. По умолчанию возвращает все виртуальные
+     * свойства и их значения.
      *
      * @param  bool   $type Тип возвращаемой информации (константы 'INFO_*')
      * @return mixed
      */
     public function getAll($type = self::INFO_VIRTUAL_PROPERTIES)
     {
+        $result = [];
+
         if ($type == self::INFO_METHODS) {
-            // либо название метода и значение
-        } elseif ($type = self::INFO_PROPERTIES) {
-            // Либо вернет название свойства - значение
+
+            // Возвращает названия методов и значения свойств файла
+            $methods = static::getExtractionMethods();
+
+            foreach ($methods as $method) {
+                $result[$method] = $this->$method();
+            }
+
+        } elseif ($type == self::INFO_PROPERTIES) {
+
+            // Возвращает названия свойств и значения свойств файла
+            $properties = static::getProperties();
+
+            foreach ($properties as $method => $property) {
+                $result[$property] = $this->$method();
+            }
+
         } else {
-            // либо название свойств и алиасов и значение
+
+            // Возвращает названия свойств и алиасов и значения свойств файла
+            $properties = static::getVirtualProperties();
+
+            foreach ($properties as $property => $method) {
+                $result[$property] = $this->$method();
+            }
         }
+
+        return $result;
     }
 
     /**
@@ -350,10 +375,10 @@ abstract class FileExplorer
      */
     public function getValueByAlias($name)
     {
-        $aliases = static::getAliasExtractionMethods();
+        $aliasMethods = static::getAliasExtractionMethods();
 
-        if (array_key_exists($name, $aliases)) {
-            return $this->$aliases[$name]();
+        if (array_key_exists($name, $aliasMethods)) {
+            return call_user_func([$this, $aliasMethods[$name]]);
         }
 
         return null;
@@ -371,7 +396,7 @@ abstract class FileExplorer
         $properties = array_flip(static::getProperties());
 
         if (array_key_exists($name, $properties)) {
-            return $this->$properties[$name]();
+            return call_user_func([$this, $properties[$name]]);
         }
 
         return null;
@@ -391,7 +416,7 @@ abstract class FileExplorer
         $properties = static::getVirtualProperties();
 
         if (array_key_exists($name, $properties)) {
-            return $this->$properties[$name]();
+            return call_user_func([$this, $properties[$name]]);
         }
 
         return null;
