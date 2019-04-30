@@ -174,6 +174,13 @@ abstract class FileExplorer
                 && (substr($method, (-1) * strlen(static::$suffixFunctionName)) == static::$suffixFunctionName));
     }
 
+    /**
+     * Проверяет, исключен ли из использования для извлечения
+     * виртуальных свойств указанный метод класса.
+     *
+     * @param  string  $method
+     * @return boolean
+     */
     protected static function isException($method)
     {
         if (! isset(self::$allExpections)) {
