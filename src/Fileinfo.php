@@ -26,7 +26,7 @@ class Fileinfo
      *
      * @var array
      */
-    protected static $classes = [];
+    private static $classes;
 
     /**
      * Виртуальные свойства и обрабатываемые типы.
@@ -43,25 +43,26 @@ class Fileinfo
      *
      * @var mixed
      */
-    protected static $virtualProperties;
+    private static $virtualProperties;
 
     /**
-     * Список методов применяемый при обработке файла в случае отсутствия
-     * указанных методов и значения переменной $getAll - false.
+     * Список виртуальных свойств запрашиваемых при обработке файла в случае
+     * отсутствия указанных виртуальных свойств и значения переменной
+     * $getAll - false.
      *
      * Пример:
-     * $defaultMethods = [
+     * $defaultVirtualProperties = [
      *     'size',
      * ];
      *
      * @var array
      */
-    protected static $defaultMethods = [];
+    protected static $defaultVirtualProperties;
 
     /**
      * True означает возвращать всю возможную информацию о файле. При значении
      * true игнорируется список из массива $defaultMethods и используется
-     * $methods.
+     * $virtualProperties.
      *
      * @var bool
      */
@@ -76,24 +77,21 @@ class Fileinfo
      */
     public static function addClass($className)
     {
-         // Выполняется проверка добавляемого класса в массиве, проверяется
-         // существование класса и его принадлежность абстрактному FileExplorer.
-         // В случае успеха, класс добавляется в список и из него извлекается
-         // информация о методах и обрабатываемых типах данных.
-         //
-         // Добавление класса происходит по одному, чтобы собрать всю информацию
-         // об обрабатываемых данных: типы файлов, свойства файлов, методы
-         // классов.
-        if (! in_array($className, static::$classes)) {
+        if (! isset(self::$classes)) {
+            self::$classes = [];
+        }
+
+        // Добавление класса происходит с извлечением информации,
+        // чтобы ускорить поиск необходимых классов для запуска обработки:
+        // типы файлов, свойства файлов, методы классов.
+        if (! in_array($className, self::$classes)) {
             if (class_exists($className)) {
                 if (is_subclass_of($className, FileExplorer::class)) {
 
-                    static::$classes[] = $className;
+                    self::$classes[] = $className;
 
                     $features = static::getClassFeatures($className);
 
-                    // Должен быть инициализирован только класс унаследованный
-                    // от FileExplorer
                     if (isset($features)) {
                         foreach ($features['virtual_properties'] as $property) {
                             static::addVirtualProperty($property, $className, $features['mimes']);
@@ -115,7 +113,90 @@ class Fileinfo
      */
     public static function getClasses()
     {
-        return static::$classes;
+        return self::$classes;
+    }
+
+    /**
+     * Возвращает информацию о возможностях класса: обрабатываемые типы,
+     * используемые методы извлечения.
+     * Если указан массив $requiredData (запрашиваемые данные класса), то
+     * возвращаются только указанные и поддерживаемые данные: mimes,
+     * virtual_properties, properties, aliases, methods.
+     *
+     * @param  string $className
+     * @param  array  $requiredData
+     * @return mixed
+     */
+    public static function getClassFeatures($className, $requiredData = ['mimes', 'virtual_properties'])
+    {
+        if (class_exists($className)) {
+            if (is_subclass_of($className, FileExplorer::class)) {
+                $data = [];
+
+                if (isset($requiredData) && is_array($requiredData)) {
+                    if (in_array('mimes', $requiredData)) {
+                        $data['mimes'] = $className::getMimes();
+                    }
+
+                    if (in_array('virtual_properties', $requiredData)) {
+                        $data['virtual_properties'] = array_keys($className::getVirtualProperties());
+                    }
+
+                    if (in_array('methods', $requiredData)) {
+                        $data['methods'] = $className::getExtractionMethods();
+                    }
+
+                    if (in_array('properties', $requiredData)) {
+                        $data['properties'] = $className::getProperties();
+                    }
+
+                    if (in_array('aliases', $requiredData)) {
+                        $data['aliases'] = array_keys($className::getAliases());
+                    }
+                }
+
+                return $data;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Добавляет новое или обновляет возможности имеющегося виртуального
+     * свойства в список поддерживаемых виртуальных свойств. Если
+     * список поддерживаемых типов пуст, то считается, что класс-обработчик
+     * работает со всеми типами, если иное не определено в при обработке
+     * в классе-обработчике.
+     *
+     * @param string $property Кодовое название виртуального свойства
+     * @param string $class    Класс-обработчик
+     * @param array  $mimes    Поддерживаемые типы
+     */
+    protected static function addVirtualProperty($property, $class, $mimes = [])
+    {
+        if (empty(self::$virtualProperties)) {
+            self::$virtualProperties = [];
+        }
+
+        if (empty(self::$virtualProperties[$property])) {
+            self::$virtualProperties[$property] = [];
+        }
+
+        self::$virtualProperties[$property][$class] = $mimes;
+    }
+
+    /**
+     * Возвращает все виртуальные свойства.
+     * Если $fullDetails - true, то возвращает также классы-обработчики и
+     * типы поддерживаемых файлов. В качестве ключей массива виртуальные свойства.
+     *
+     * @param  boolean $fullDetails
+     * @return mixed
+     */
+    public static function getVirtualProperties($fullDetails = false)
+    {
+        return $fullDetails ? self::$virtualProperties : array_keys(self::$virtualProperties);
     }
 
     /**
@@ -179,14 +260,14 @@ class Fileinfo
      * @param  string $mime
      * @return string|null
      */
-    public static function getClassByVirtualProperty($property, $mime)
+    public static function getClassByVirtualProperty($property, $mime = null)
     {
         if (isset(self::$virtualProperties[$property])) {
 
             $universalClass = null;
 
             foreach (self::$virtualProperties[$property] as $className => $mimes) {
-                if (isset($mimes) && in_array($mime, $mimes)) {
+                if (isset($mime) && in_array($mime, $mimes)) {
                     return $className;
                 } elseif (empty($universalClass) && empty($mimes)) {
                     $universalClass = $className;
@@ -200,132 +281,130 @@ class Fileinfo
     }
 
     /**
-     * Возвращает информацию о возможностях класса: обрабатываемые типы,
-     * используемые методы извлечения.
+     * Устанавливает опцию возврата всей информации при отсутствии указанных
+     * виртуальных свойств. True - возврат всей информации, false - используются
+     * виртуальные поля по умолчанию.
      *
-     * @param  string $className
-     * @return mixed
+     * @param boolean $state
      */
-    public static function getClassFeatures($className)
+    public static function setStateGetAll($state)
     {
-        if (class_exists($className)) {
-            if (is_subclass_of($className, FileExplorer::class)) {
-                return [
-                    'mimes' => $className::getMimes(),
-                    //'methods' => $className::getExtractionMethods(), // могут пригодиться при вызове конкретного класса и метода, хотя можно проверить при вызове
-                    'virtual_properties' => $className::getVirtualProperties(),
-                ];
-            }
-        }
-
-        return false;
+        static::$getAll = $state;
     }
 
     /**
-     * Добавляет новое или обновляет возможности имеющегося виртуального
-     * свойства в список поддерживаемых виртуальных свойств. Если
-     * список поддерживаемых типов пуст, то считается, что класс-обработчик
-     * работает со всеми типами, если иное не определено в при обработке
-     * в классе-обработчике.
+     * Возвращает статус "возврат всей информации о файле".
      *
-     * @param string $property Кодовое название виртуального свойства
-     * @param string $class    Класс-обработчик
-     * @param array  $mimes    Поддерживаемые типы
+     * @return boolean
      */
-    protected static function addVirtualProperty($property, $class, $mimes = [])
+    public static function getStateGetAll()
     {
-        if (empty(self::$virtualProperties)) {
-            self::$virtualProperties = [];
-        }
-
-        if (empty(self::$virtualProperties[$property])) {
-            self::$virtualProperties[$property] = [];
-        }
-
-        self::$virtualProperties[$property][$class] = $mimes;
+        return static::$getAll;
     }
 
     /**
-     * Возвращает все виртуальные свойства, обрабатываемые классы и типы файлов.
+     * Добавляет виртуальное свойство для обработки по умолчанию. Если указан
+     * тип MIME, то обработка будет применяться для файлов с указанным типом.
+     * Если $replace - true, то при добавлении такого же свойства предыдущее
+     * значение будет заменено.
      *
-     * @return mixed
+     * @param string  $property
+     * @param array   $mime
+     * @param boolean $replace
+     * @return void
      */
-    public static function getVirtualProperties()
+    public static function addDefaultVirtualProperty($property, $mime = [], $replace = false)
     {
-        return self::$virtualProperties;
-    }
+        if (empty(self::$defaultVirtualProperties)) {
+            self::$defaultVirtualProperties = [];
+        }
 
-    protected static function addMethod($method, $class)
-    {
-        // добавляет метод и класс обработчик.
-        // если метод существует и хранимые значения не массив - сделать массив,
-        // перенести существующее значение, добавить новое.
+        if (! isset(self::$defaultVirtualProperties[$property]) || $replace) {
+            self::$defaultVirtualProperties[$property] = is_array($mime) ? $mime : [];
+        } else {
+            self::$defaultVirtualProperties[$property] = array_merge(self::$defaultVirtualProperties[$property], $mime);
+        }
     }
 
     /**
-     * Возвращает список методов обработки.
+     * Возвращает список виртуальных свойств вызываемых по умолчанию
+     * (используется, когда не указаны запрашиваемые виртуальные свойства).
+     * Если $fullDetails - true, то возвращает информацию об обрабатываемых
+     * типах файлов. В качестве ключей массива виртуальные свойства.
      *
-     * @param boolean $classes  Возвращать классы методов. По умолчанию false.
+     * @param  boolean $fullDetails
      * @return array
      */
-    public static function getMethods($classes = false)
+    public static function getDefaultVirtualProperties($fullDetails = false)
     {
-        return self::$methods; // TODO только ключи
+        return $fullDetails ? self::$defaultVirtualProperties : array_keys(self::$defaultVirtualProperties);
     }
 
     /**
-     * Возвращает список методов обработки по умолчанию.
-     *
-     * @return array
+     * Сбрасываем список виртуальных полей по умолчанию.
      */
-    public static function getDefaultMethods()
+    public static function resetDefaultVirtualProperties()
     {
-        return self::$defaultMethods;
-    }
-
-    /**
-     * Добавить метод обработки по умолчанию.
-     *
-     * @param string  $method Метод обработки
-     * @param boolean $exists Существование метода в списке методов
-     */
-    public static function addDefaultMethod($method, $exists = false)
-    {
-        // проверяет его наличие и добавляем, чтобы не было дубликатов
+        self::$defaultVirtualProperties = null;
     }
 
     /**
      * Возвращает сведения о файле.
      *
-     * Возвращаемая информация основывается на указанных методах, опциях,
-     * классах-обработчиках. Если файл не существует или к нему нет доступа,
+     * Возвращаемая информация основывается на указанных виртуальных свойствах
+     * и опциях обработки файлов. Если файл не существует или к нему нет доступа,
      * то возвращается значение false.
      *
-     * @param  string                $filename Путь к файлу
-     * @param  array|string|integer  $methods  Методы извлечения данных или виды требуемой информации
-     * @param  array                 $options  Опции обработки файла
+     * @param  string        $filename          Полный путь к файлу
+     * @param  array|string  $virtualProperties Извлекаемые свойства
+     * @param  array         $options           Опции обработки файла
      * @return mixed
      */
-    public static function file($filename, $methods = [], $options = [])
+    public static function file($filename, $virtualProperties = null/*, $options = []*/)
     {
         if (file_exists($filename)) {
-            if (isset($methods)) {
-                // TODO если методы все-таки заданы, то проверить тип значения
-                // и продолжить разработку
 
-                return [];
+            $values = [];
+            $propertyValue = null;
+
+            // Возвращаем перечисленные свойства из $virtualProperties
+            if (isset($virtualProperties)) {
+
+                // Извлекаем одно свойство
+                if (is_string($virtualProperties) && isset(self::$virtualProperties[$virtualProperties])) {
+                    $propertyValue = static::getFileinfo($filename, $virtualProperties/*, $options*/);
+
+                    return isset($propertyValue) ? [$virtualProperties => $propertyValue] : [];
+                }
+                // Извлекаем перечисленные свойства или все свойства, если задан пустой массив
+                elseif (is_array($virtualProperties)) {
+
+                    // При пустом массиве извлекаем все свойства
+                    if (count($virtualProperties) == 0) {
+                        $virtualProperties = static::getVirtualProperties();
+                    }
+                }
+            }
+            // Возвращаем всю информацию о файле
+            elseif (self::$getAll || empty(self::$defaultVirtualProperties)) {
+                $virtualProperties = static::getVirtualProperties();
+            }
+            // Возвращает свойства по умолчанию
+            else {
+                $virtualProperties = static::getDefaultVirtualProperties();
             }
 
-            if (self::$getAll) {
-                // вернуть всю информацию о файлах
-                $methods = self::getMethods();
-                // циклом пойти извлекать значения
-                // TODO вернуть массив свойств
-            } else {
-                // вернуть только важную информацию о файлах
-                $methods = self::getDefaultMethods();
-                // вернуть массив свойств
+            if (isset($virtualProperties) && is_array($virtualProperties) && count($virtualProperties)) {
+                foreach ($virtualProperties as $property) {
+                    $propertyValue = static::getFileinfo($filename, $property/*, $options*/);
+
+                    if (isset($propertyValue)) {
+                        $values[$property] = $propertyValue;
+                    }
+                }
             }
+
+            return $values;
         }
 
         return false;
@@ -334,27 +413,41 @@ class Fileinfo
     /**
      * Возвращает информацию о файле по указанному методу.
      *
-     * При недоступности файла возвращает false.
+     * При недоступности файла возвращает false. При отсутствии указанного
+     * свойства возвращается null.
      *
-     * @param  string $filename Путь к файлу
-     * @param  string $method   Название метода извлечения информации или свойство
-     * @param  array  $options  Опции получения информации
+     * @param  string $filename
+     * @param  string $virtualProperty
+     * @param  array  $options
      * @return mixed
      */
-    public static function getFileinfo($filename, $method, $options = [])
+    public static function getFileinfo($filename, $virtualProperty/*, $options = []*/)
     {
         if (file_exists($filename)) {
-            if (is_string($method) && isset(self::$methods[$method])) {
+            if (is_string($virtualProperty) && isset(self::$virtualProperties[$virtualProperty])) {
 
-                $mime = mime_type($filename);
+                $className = self::getClassByVirtualProperty($virtualProperty, static::getFileType($filename));
 
-                $className = self::getClassByMethodAndMime($method, $mime);
+                $class = new $className(); // TODO постоянно создаются существующие классы
+                $class->setFile($filename); // TODO постоянно задается одинаковый файл для обработки
 
-                // Вызываем указанный метод получения информации или свойство
-                //$className->getValueByName($method)
+                return $class->getValueByVirtualProperty($virtualProperty);
             }
+
+            return null;
         }
 
         return false;
+    }
+
+    /**
+     * Возвращает MIME-тип файла, если файл существует. Иначе возвращает null.
+     *
+     * @param  string $filename
+     * @return string
+     */
+    public static function getFileType($filename)
+    {
+        return file_exists($filename) ? mime_content_type($filename) : null;
     }
 }
