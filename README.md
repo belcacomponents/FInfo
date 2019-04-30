@@ -32,40 +32,44 @@ Fileinfo работает со статическими методами, поэ
     // Подключите основной класс Fileinfo и классы-обработчики
     use Belca\FInfo\Fileinfo; // Основной
     use Belca\FInfo\BasicFileinfo; // Базовый класс-обработчик
+
     ...
+
     // Добавьте классы-обработчики в список обработчиков
     Fileinfo::addClass(BasicFileinfo::class);
+
     ...
+
     // Извлеките всю информацию о файле
     Fileinfo::file($filename);
 
     // Output:
-    [
-        [created] => 1531556313
-        [edited] => 1531556313
-        [size] => 9399
-        [filesize] => 9399
-    ]
+    // [
+    //     [created] => 1531556313
+    //     [edited] => 1531556313
+    //     [size] => 9399
+    //     [filesize] => 9399
+    // ]
 
     // Получите информацию о конкретных виртуальных свойствах
     Fileinfo::file($filename, ['created', 'size');
 
     // Output:
-    [
-        [created] => 1531556313
-        [size] => 9399
-    ]
+    // [
+    //     [created] => 1531556313
+    //     [size] => 9399
+    // ]
 
     // Если вы укажите несуществующее виртуальное свойство, то ошибок не будет. Свойство не будет возвращено.
     Fileinfo::file($filename, ['created', 'edited', 'size', 'length');
 
     // Output:
-    [
-        [created] => 1531556313
-        [edited] => 1531556313
-        [size] => 9399
-        [filesize] => 9399
-    ]
+    // [
+    //     [created] => 1531556313
+    //     [edited] => 1531556313
+    //     [size] => 9399
+    //     [filesize] => 9399
+    // ]
 
     // Получите информацию только об одном виртуальном свойстве
     Fileinfo::getFileinfo($filename, 'size');
@@ -76,16 +80,16 @@ Fileinfo работает со статическими методами, поэ
     Fileinfo::file($filename, ['size']);
 
     // Output:
-    [
-        [size] => 9399
-    ]
+    // [
+    //     [size] => 9399
+    // ]
 
     // Или
     Fileinfo::file($filename, 'size');
 
-    [
-        [size] => 9399
-    ]
+    // [
+    //     [size] => 9399
+    // ]
 
 
 ## Расширение Fileinfo и FileExplorer
@@ -140,7 +144,9 @@ Fileinfo работает со статическими методами, поэ
 
     use Belca\FInfo\Fileinfo; // Основной
     use Belca\FInfo\ImageColorFileinfo; // Класс извлекающий цвет из изображения
-        ...
+
+    ...
+
     // Добавляем в список обработчиков файла
     Fileinfo::addClass(ImageColorFileinfo::class);
 
@@ -172,4 +178,4 @@ Fileinfo работает со статическими методами, поэ
 
 ## Лицензия
 
-Пакет распространяется с лицензией [MIT](https://opensource.org/licenses/mit-license.php).
+Пакет распространяется по лицензии [MIT](https://opensource.org/licenses/mit-license.php).
