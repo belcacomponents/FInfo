@@ -196,7 +196,7 @@ class Fileinfo
      */
     public static function getVirtualProperties($fullDetails = false)
     {
-        return $fullDetails ? self::$virtualProperties : array_keys(self::$virtualProperties);
+        return $fullDetails ? self::$virtualProperties : array_keys(self::$virtualProperties ?? []);
     }
 
     /**
